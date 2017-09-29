@@ -16,7 +16,7 @@
   若使用ansible的file/copy/templates将脚本传入到节点，然后通过shell模块执行，若通过stdout返回不容易采集。在这里我们先定义ansible的自定义模块然后将信息通过json格式返回给控制端。
 
 
-#2.自定义模块
+# 2.自定义模块
 添加ansible自定义模块路径
 ```
 vi /etc/ansible/ansible.cfg
@@ -30,11 +30,11 @@ library        = /usr/share/my_modules/
 作用：修改grastate.dat文件，将其中的`safe_to_bootstrap: 0`修改为`safe_to_bootstrap: 1`
 
 
-#3. 调用程序
+# 3. 调用程序
 调用程序使用ansible 2.0后的接口，2.0后的API接口调用变的复杂一点，但是功能强大很多，在这里对ansible api进行了继承改写
 
 
-#4.调测
+# 4.调测
 - 正常关闭数据库2个节点（128.138/139），启动：
 ```
 $ python galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=4309 --start_hosts=192.168.128.138,192.168.128.139
