@@ -1,87 +1,82 @@
 #!/usr/bin/python
 #encoding:utf-8
 
-#import json
-from collections import namedtuple
-from ansible.parsing.dataloader import DataLoader
-from ansible.vars import VariableManager
-from ansible.inventory import Inventory
-from ansible.playbook.play import Play
-from ansible.executor.task_queue_manager import TaskQueueManager
-from ansible.plugins.callback import CallbackBase
 from optparse import OptionParser
-import copy
+import copy,os,sys
+
+from src.ansible_api import ansible_invoke_api
+
+# # Create a callback object so we can capture the output
+# class ResultCallback(CallbackBase):
+#     """A sample callback plugin used for performing an action as results come in
+#
+#     If you want to collect all results into a single object for processing at
+#     the end of the execution, look into utilizing the ``json`` callback plugin
+#     or writing your own custom callback plugin
+#     """
+#
+#     def v2_runner_on_ok(self, result, **kwargs):
+#         """Print a json representation of the result
+#
+#         This method could store the result in an instance attribute for retrieval later
+#         """
+#         host = result._host
+#         #print dict(result._result)
+#         galera_info[host.name] = dict(result._result)
+#         #print galera_info
+#
+#
+# def ansibleRun(host_list, task_list):
+#     Options = namedtuple('Options',
+#                          ['connection', 'module_path', 'forks', 'remote_user', 'private_key_file',
+#                           'ssh_common_args', 'ssh_extra_args', 'sftp_extra_args', 'scp_extra_args',
+#                           'become', 'become_method', 'become_user', 'verbosity', 'check'])
+#
+#     # initialize needed objects
+#     variable_manager = VariableManager()
+#     loader = DataLoader()
+#     options = Options(connection='smart', module_path=None,
+#                       forks=100, remote_user="root", private_key_file=None, ssh_common_args=None, ssh_extra_args=None,
+#                       sftp_extra_args=None, scp_extra_args=None, become=None, become_method=None,
+#                       become_user="root", verbosity=None, check=False
+#                       )
+#
+#     passwords = dict()
+#
+#     # Instantiate our ResultCallback for handling results as they come in
+#     results_callback = ResultCallback()
+#
+#     # create inventory and pass to var manager
+#     inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=host_list)
+#     variable_manager.set_inventory(inventory)
+#
+#     # create play with tasks
+#     play_source = dict(
+#         name="Ansible Play",
+#         hosts=host_list,
+#         gather_facts='no',
+#         tasks=task_list
+#     )
+#     play = Play().load(play_source, variable_manager=variable_manager, loader=loader)
+#
+#     # actually run it
+#     tqm = None
+#     try:
+#         tqm = TaskQueueManager(
+#             inventory=inventory, variable_manager=variable_manager,
+#             loader=loader, options=options, passwords=passwords,
+#             stdout_callback=results_callback,  # Use our custom callback instead of the ``default`` callback plugin
+#             #stdout_callback='default',
+#         )
+#         result = tqm.run(play)
+#     except Exception,ex:
+#         print ex
+#     finally:
+#         if tqm is not None:
+#             tqm.cleanup()
 
 
-# Create a callback object so we can capture the output
-class ResultCallback(CallbackBase):
-    """A sample callback plugin used for performing an action as results come in
-
-    If you want to collect all results into a single object for processing at
-    the end of the execution, look into utilizing the ``json`` callback plugin
-    or writing your own custom callback plugin
-    """
-
-    def v2_runner_on_ok(self, result, **kwargs):
-        """Print a json representation of the result
-
-        This method could store the result in an instance attribute for retrieval later
-        """
-        host = result._host
-        #print dict(result._result)
-        galera_info[host.name] = dict(result._result)
-        #print galera_info
-
-
-def ansibleRun(host_list, task_list):
-    Options = namedtuple('Options',
-                         ['connection', 'module_path', 'forks', 'remote_user', 'private_key_file',
-                          'ssh_common_args', 'ssh_extra_args', 'sftp_extra_args', 'scp_extra_args',
-                          'become', 'become_method', 'become_user', 'verbosity', 'check'])
-
-    # initialize needed objects
-    variable_manager = VariableManager()
-    loader = DataLoader()
-    options = Options(connection='smart', module_path=None,
-                      forks=100, remote_user="root", private_key_file=None, ssh_common_args=None, ssh_extra_args=None,
-                      sftp_extra_args=None, scp_extra_args=None, become=None, become_method=None,
-                      become_user="root", verbosity=None, check=False
-                      )
-
-    passwords = dict()
-
-    # Instantiate our ResultCallback for handling results as they come in
-    results_callback = ResultCallback()
-
-    # create inventory and pass to var manager
-    inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=host_list)
-    variable_manager.set_inventory(inventory)
-
-    # create play with tasks
-    play_source = dict(
-        name="Ansible Play",
-        hosts=host_list,
-        gather_facts='no',
-        tasks=task_list
-    )
-    play = Play().load(play_source, variable_manager=variable_manager, loader=loader)
-
-    # actually run it
-    tqm = None
-    try:
-        tqm = TaskQueueManager(
-            inventory=inventory, variable_manager=variable_manager,
-            loader=loader, options=options, passwords=passwords,
-            stdout_callback=results_callback,  # Use our custom callback instead of the ``default`` callback plugin
-            #stdout_callback='default',
-        )
-        result = tqm.run(play)
-    except Exception,ex:
-        print ex
-    finally:
-        if tqm is not None:
-            tqm.cleanup()
-
+# 检查当前是否有存活节点
 def cluster_has_active_instance(galera_info):
     cluster_has_active_instance = False
     for ip in galera_info:
@@ -89,14 +84,7 @@ def cluster_has_active_instance(galera_info):
             cluster_has_active_instance = True
     return cluster_has_active_instance
 
-def cluster_has_active_instance(galera_info):
-    cluster_has_active_instance = False
-    for ip in galera_info:
-        # 为0表示为active，为1表示not active
-        if galera_info[ip]["database_info"]["is_alive"] == 0:
-            cluster_has_active_instance = True
-    return cluster_has_active_instance
-
+# 检查是否存在安全启动的节点
 def cluster_has_safe_bootstrap(galera_info):
     cluster_has_safe_bootstrap = False
     for ip in galera_info:
@@ -118,6 +106,9 @@ if __name__ == '__main__':
     global galera_info
     galera_info = {}
 
+    # 导入自定义模块环境变量
+    os.environ['ANSIBLE_LIBRARY'] = sys.path[0] + '/ansible_modules'
+
     ## 需要传入的参数##########################################################################
     parser = OptionParser()
     parser.add_option("-c", "--cluster_hosts", dest="cluster_hosts", help="cluster all hosts", default="")
@@ -125,10 +116,14 @@ if __name__ == '__main__':
     parser.add_option("-p", "--port", dest="port", help="need to start database port", default="")
     (options, args) = parser.parse_args()
 
+
     #集群所有数据库实例IP
     cluster_hosts = options.cluster_hosts.split(",")
     #数据库实例端口
     port = options.port
+
+    cluster_hosts = ['192.168.128.138', '192.168.128.139', '192.168.128.148']
+    port = 3307
     #需要启动的数据库实例IPlist(options.cluster_hosts)
     start_hosts = options.start_hosts.split(",")
     #########################################################################################
@@ -139,8 +134,22 @@ if __name__ == '__main__':
     ]
 
     #获取集群数据库状态信息
-    ansibleRun(cluster_hosts, tasks_list)
+    for host in cluster_hosts:
+        result_collector = ansible_invoke_api.run_modules(host,tasks_list)
 
+        if result_collector.host_unreachable:
+            print result_collector.host_unreachable
+
+        if result_collector.host_failed:
+            print result_collector.host_failed
+
+        print ansible_invoke_api.run_modules(host,tasks_list).host_ok
+
+
+
+    print galera_info
+
+    # 检查
     if len(galera_info) == len(cluster_hosts):
         #普通启动
         normal_start_hosts = copy.deepcopy(start_hosts)

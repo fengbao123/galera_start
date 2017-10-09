@@ -73,6 +73,7 @@ class Options(object):
 options = Options()
 
 
+# 调用shell命令接口
 def run_adhoc(host,order):
     variable_manager.extra_vars={"ansible_ssh_user":"root" , "ansible_ssh_pass":"tydic123"}
 
@@ -104,6 +105,7 @@ def run_adhoc(host,order):
         if tqm is not None:
             tqm.cleanup()
 
+#调用模块接口
 def run_modules(host,task_list):
     variable_manager.extra_vars={"ansible_ssh_user":"root" , "ansible_ssh_pass":"tydic123"}
 
@@ -135,6 +137,7 @@ def run_modules(host,task_list):
         if tqm is not None:
             tqm.cleanup()
 
+#调用playbook接口
 def run_playbook(books):
     results_callback = callback_loader.get('json')
     playbooks = [books]
