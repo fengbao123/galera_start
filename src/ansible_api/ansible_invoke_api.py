@@ -1,19 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import json
-from ansible.parsing.dataloader import DataLoader
-from ansible.vars import VariableManager
-from ansible.inventory import Inventory
-from ansible.playbook.play import Play
-from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.executor.playbook_executor import PlaybookExecutor
-
+from ansible.executor.task_queue_manager import TaskQueueManager
+from ansible.inventory import Inventory
+from ansible.parsing.dataloader import DataLoader
+from ansible.playbook.play import Play
 from ansible.plugins import callback_loader
 from ansible.plugins.callback import CallbackBase
+from ansible.vars import VariableManager
 
-import os
-import logging
-
+from conf import config_vars
 
 loader = DataLoader()
 variable_manager = VariableManager()
@@ -75,13 +71,13 @@ options = Options()
 
 # 调用shell命令接口
 def run_adhoc(host,order):
-    variable_manager.extra_vars={"ansible_ssh_user":"root" , "ansible_ssh_pass":"tydic123"}
+    #variable_manager.extra_vars={"ansible_ssh_user":"%s" % config_vars.OS_USER , "ansible_ssh_pass": "%s" % config_vars.OS_USER_PASSWD}
 
     play_source = dict(
         name = "Ansible Ad-Hoc",
         hosts = host,
         gather_facts = "no",
-        tasks = [{"action":{"module":"command","args":"%s"%order}}]
+        tasks = [{"action":{"module":"shell","args":"%s"%order}}]
     )
 
     play = Play().load(play_source, variable_manager=variable_manager, loader=loader)
@@ -107,7 +103,7 @@ def run_adhoc(host,order):
 
 #调用模块接口
 def run_modules(host,task_list):
-    variable_manager.extra_vars={"ansible_ssh_user":"root" , "ansible_ssh_pass":"tydic123"}
+    #variable_manager.extra_vars={"ansible_ssh_user":"%s" % config_vars.OS_USER , "ansible_ssh_pass": "%s" % config_vars.OS_USER_PASSWD}
 
     play_source = dict(
         name="Ansible Ad-Hoc",
@@ -142,7 +138,7 @@ def run_playbook(books):
     results_callback = callback_loader.get('json')
     playbooks = [books]
 
-    variable_manager.extra_vars={"ansible_ssh_user":"root" , "ansible_ssh_pass":"tydic123"}
+    #variable_manager.extra_vars={"ansible_ssh_user":"%s" % config_vars.OS_USER  , "ansible_ssh_pass": "%s" % config_vars.OS_USER_PASSWD}
     callback = ResultsCollector()
 
     pd = PlaybookExecutor(

@@ -17,21 +17,24 @@
 
 
 # 2.自定义模块
-添加ansible自定义模块路径
-```
-vi /etc/ansible/ansible.cfg
-library        = /usr/share/my_modules/
-```
 
-自定义模块名：get_galera_info
+- 自定义模块名：get_galera_info
 作用：获取galera数据库信息
 
-自定义模块：set_safe_to_bootstrap
+- 自定义模块：set_safe_to_bootstrap
 作用：修改grastate.dat文件，将其中的`safe_to_bootstrap: 0`修改为`safe_to_bootstrap: 1`
 
 
 # 3. 调用程序
 调用程序使用ansible 2.0后的接口，2.0后的API接口调用变的复杂一点，但是功能强大很多，在这里对ansible api进行了继承改写
+
+# 4. 部署
+1. 添加ansible自定义模块路径
+```
+vi /etc/ansible/ansible.cfg
+library        = /usr/share/my_modules/:/home/fengbao/PycharmProjects/galera_start/src/ansible_modules
+```
+在这里将我们自定义的模块添加到ansible中
 
 
 # 4.调测
