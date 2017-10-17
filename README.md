@@ -32,11 +32,26 @@
 1. 添加ansible自定义模块路径
 ```
 vi /etc/ansible/ansible.cfg
-library        = /usr/share/my_modules/:/home/fengbao/PycharmProjects/galera_start/src/ansible_modules
+library        = /usr/share/my_modules/:/etc/ansible/scripts/galera_start/src/ansible_modules
 ```
 在这里将我们自定义的模块添加到ansible中
 
+2. 配置ansible的inventory
+```
+vi /etc/ansible/hosts
+[mysqldb]
+172.16.0.79 ansible_ssh_user=root ansible_ssh_pass="xxxxx" ansible_ssh_port=22
+172.16.0.83 ansible_ssh_user=root ansible_ssh_pass="xxxxx" ansible_ssh_port=22
+172.16.0.97 ansible_ssh_user=root ansible_ssh_pass="xxxxx" ansible_ssh_port=22
 
+#测试：
+ansible mysqldb -m ping
+```
+
+3. 配置文件修改
+```
+vi
+```
 # 4.调测
 - 正常关闭数据库2个节点（128.138/139），启动：
 ```
