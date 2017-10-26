@@ -29,69 +29,127 @@
 调用程序使用ansible 2.0后的接口，2.0后的API接口调用变的复杂一点，但是功能强大很多，在这里对ansible api进行了继承改写
 
 # 4. 部署
-1. 添加ansible自定义模块路径
+1. 安装
+```
+python setup.py install
+```
+
+2. 添加ansible自定义模块路径
 ```
 vi /etc/ansible/ansible.cfg
-library        = /usr/share/my_modules/:/etc/ansible/scripts/galera_start/src/ansible_modules
+library        = /usr/share/my_modules/
 ```
 在这里将我们自定义的模块添加到ansible中
 
-2. 配置ansible的inventory
+3. 配置ansible的inventory
 ```
 vi /etc/ansible/hosts
-[mysqldb]
-172.16.0.79 ansible_ssh_user=root ansible_ssh_pass="xxxxx" ansible_ssh_port=22
-172.16.0.83 ansible_ssh_user=root ansible_ssh_pass="xxxxx" ansible_ssh_port=22
-172.16.0.97 ansible_ssh_user=root ansible_ssh_pass="xxxxx" ansible_ssh_port=22
+[galera]
+192.168.128.138 ansible_ssh_user=root ansible_ssh_pass=xxxxx ansible_ssh_port=22
+192.168.128.139 ansible_ssh_user=root ansible_ssh_pass=xxxxx ansible_ssh_port=22
+192.168.128.148 ansible_ssh_user=root ansible_ssh_pass=xxxxx ansible_ssh_port=22
 
 #测试：
-ansible mysqldb -m ping
+ansible galera -m ping
 ```
 
-3. 配置文件修改
+# 5.调测
+- 注意：我这边规范化路径如下：数据库软件/mysql目录；数据库目录/mysqldata，子目录以端口号分割
 ```
-vi
+    [root@mysqldb1 mysqldata]# tree -Lf 1 /mysqldata/3306
+    /mysqldata/3306
+    ├── /mysqldata/3306/binlog
+    ├── /mysqldata/3306/data
+    ├── /mysqldata/3306/log
+    ├── /mysqldata/3306/my.cnf
+    ├── /mysqldata/3306/run
+    └── /mysqldata/3306/tmp
 ```
-# 4.调测
-- 正常关闭数据库2个节点（128.138/139），启动：
+- 数据库全部已启动状态测试
 ```
-$ python galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=4309 --start_hosts=192.168.128.138,192.168.128.139
+$ galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=3307 --start_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --user=dic_wh --password=xxxxx
+{u'192.168.128.139': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}, u'192.168.128.138': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}, u'192.168.128.148': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}}
+cluster have active instance
+ip:192.168.128.138,port:3307 is active! don't need to start
+ip:192.168.128.139,port:3307 is active! don't need to start
+ip:192.168.128.148,port:3307 is active! don't need to start
+new cluster start:[]
+normal start: []
+192.168.128.138 now is alive
+192.168.128.139 now is alive
+192.168.128.148 now is alive
+```
+- 正常关闭数据库2个节点，启动：
+```
+$ galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=3307 --start_hosts=192.168.128.138,192.168.128.139 --user=dic_wh --password=xxxx
+{u'192.168.128.139': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.138': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.148': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}}
 cluster have active instance
 new cluster start:[]
 normal start: ['192.168.128.138', '192.168.128.139']
+192.168.128.138 now is not alive, you must check!
+192.168.128.139 now is alive
+
+# 由于刚启动数据库可能无法正常对外提供服务，可重复执行几次，确保数据库正常启动
+$ galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=3307 --start_hosts=192.168.128.138,192.168.128.139 --user=dic_wh --password=xxxx
+{u'192.168.128.139': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}, u'192.168.128.138': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}, u'192.168.128.148': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}}
+cluster have active instance
+ip:192.168.128.138,port:3307 is active! don't need to start
+ip:192.168.128.139,port:3307 is active! don't need to start
+new cluster start:[]
+normal start: []
+192.168.128.138 now is alive
+192.168.128.139 now is alive
 ```
 - 正常关闭所有节点，启动bootstrap不为1的节点，以及启动为1的节点
 ```
 # 启动bootstrap不为1的节点，会有提示需要先启动bootstrap，并且普通启动138和139两个节点，不过138和139启动后不能提供服务以及连接
-$ python galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=4309 --start_hosts=192.168.128.138,192.168.128.139
+$ galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=3307 --start_hosts=192.168.128.138,192.168.128.139 --user=dic_wh --password=xxx
+{u'192.168.128.139': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.138': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.148': {u'seqno': u'null', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'1'}}
 cluster has safe_bootstrap
-the boostrap instance is not in start_host_list, you must start ip:192.168.128.148, port:4309 first
+the boostrap instance is not in start_host_list, you must start ip:192.168.128.148, port:3307 first
 new cluster start:[]
 normal start: ['192.168.128.138', '192.168.128.139']
-#启动safe_to_bootstrap=1的节点：
-$ python galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=4309 --start_hosts=192.168.128.148
+192.168.128.138 now is not alive, you must check!
+192.168.128.139 now is not alive, you must check!
+
+#启动safe_to_bootstrap=1的节点，或者全部启动：
+$ galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=3307 --start_hosts=192.168.128.148 --user=dic_wh --password=xxx
+{u'192.168.128.139': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.138': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.148': {u'seqno': u'null', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'1'}}
 cluster has safe_bootstrap
 new cluster start:['192.168.128.148']
 normal start: []
+192.168.128.148 now is not alive, you must check!
+
+$ galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=3307 --start_hosts=192.168.128.148 --user=dic_wh --password=xxx
+{u'192.168.128.139': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.138': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.148': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}}
+cluster have active instance
+ip:192.168.128.148,port:3307 is active! don't need to start
+new cluster start:[]
+normal start: []
+192.168.128.148 now is alive
+
+$ galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=3307 --start_hosts=192.168.128.138,192.168.128.139 --user=dic_wh --password=xxx
+{u'192.168.128.139': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.138': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.148': {u'seqno': u'null', u'is_alive': 1, u'port': u'3307', u'safe_to_bootstrap': u'null'}}
+cluster have active instance
+new cluster start:[]
+normal start: ['192.168.128.138', '192.168.128.139']
+192.168.128.138 now is alive
+192.168.128.139 now is alive
+
 ```
 
 - kill掉所有节点，启动所有节点
 ```
-$ python galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=4309 --start_hosts=192.168.128.148,192.168.128.138,192.168.128.139
+$ galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=3307 --start_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --user=dic_wh --password=xxx
+{u'192.168.128.139': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.138': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}, u'192.168.128.148': {u'seqno': u'108197', u'is_alive': 0, u'port': u'3307', u'safe_to_bootstrap': u'0'}}
 cluster has no safe bootstrap
-the last commited host is:192.168.128.138
-new cluster start:['192.168.128.138']
-normal start: ['192.168.128.148', '192.168.128.139']
+the last commited host is:192.168.128.139
+new cluster start:['192.168.128.139']
+normal start: ['192.168.128.138', '192.168.128.148']
+192.168.128.138 now is alive
+192.168.128.139 now is alive
+192.168.128.148 now is alive
+
 ```
 
-- 重复启动
-```
-$ python galera_start.py --cluster_hosts=192.168.128.138,192.168.128.139,192.168.128.148 --port=4309 --start_hosts=192.168.128.148,192.168.128.138,192.168.128.139
-cluster have active instance
-ip:192.168.128.148,port:4309 is active! don't need to start
-ip:192.168.128.138,port:4309 is active! don't need to start
-ip:192.168.128.139,port:4309 is active! don't need to start
-[]
-new cluster start:[]
-normal start: []
-```
+*注：脚本可以重复执行几次，确保所有节点都是活动状态*

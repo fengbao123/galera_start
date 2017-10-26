@@ -9,7 +9,6 @@ from ansible.plugins import callback_loader
 from ansible.plugins.callback import CallbackBase
 from ansible.vars import VariableManager
 
-from conf import config_vars
 
 loader = DataLoader()
 variable_manager = VariableManager()

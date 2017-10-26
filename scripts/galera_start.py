@@ -5,9 +5,6 @@ import copy
 from optparse import OptionParser
 
 from src.ansible_api import ansible_invoke_api
-# 导入全局变量
-from conf import config_vars
-
 
 # 检查当前是否有存活节点
 def cluster_has_active_instance(galera_info):
@@ -40,15 +37,18 @@ if __name__ == '__main__':
     galera_info = {}
     result_info = []
 
-    # # 导入自定义模块环境变量
-    # # os.environ['ANSIBLE_LIBRARY'] = config_vars.ANSIBLE_LIBRARY
-    # os.environ['ANSIBLE_LIBRARY'] = sys.path[0] + '/../src/ansible_modules'
 
     ## 需要传入的参数##########################################################################
     parser = OptionParser()
     parser.add_option("-c", "--cluster_hosts", dest="cluster_hosts", help="cluster all hosts", default="")
     parser.add_option("-s", "--start_hosts", dest="start_hosts", help="need to start hosts", default="")
     parser.add_option("-p", "--port", dest="port", help="need to start database port", default="")
+
+    parser.add_option("-M", "--mysql_path", dest="mysql_path", help="mysql software path", default="/mysql")
+    parser.add_option("-D", "--mysqldata_path", dest="mysqldata_path", help="mysql data path", default="/mysqldata")
+    parser.add_option("-U", "--user", dest="user", help="mysql database user", default="dic_wh")
+    parser.add_option("-P", "--password", dest="password", help="mysql database user's password", default="tydic123")
+
     (options, args) = parser.parse_args()
 
 
@@ -57,9 +57,8 @@ if __name__ == '__main__':
     #数据库实例端口
     port = options.port
 
-
-
-    #需要启动的数据库实例IPlist(options.cluster_hosts)
+    # 需要启动的数据库实例IP
+    start_hosts = options.start_hosts.split(",")
 
     #########################################################################################
 
@@ -72,10 +71,10 @@ if __name__ == '__main__':
     get_galera_info = [
         dict(action=dict(module='get_galera_info',
                          args=dict(port="%s"  % port,
-                                   mysql_path="%s" % config_vars.MYSQL_PATH,
-                                   mysql_data_path="%s" % config_vars.MYSQLDATA_PATH,
-                                   mysql_user = "%s" % config_vars.MYSQL_USER,
-                                   mysql_user_passwd = "%s" % config_vars.MYSQL_USER_PASSWD))),
+                                   mysql_path="%s" % options.mysql_path,
+                                   mysql_data_path="%s" % options.mysqldata_path,
+                                   mysql_user = "%s" % options.user,
+                                   mysql_user_passwd = "%s" % options.password))),
     ]
 
     #获取集群数据库状态信息
@@ -96,8 +95,6 @@ if __name__ == '__main__':
         for list in  lists:
             galera_info[list['ip']] = dict(list['result']['database_info'] )
 
-    # for ip in galera_info:
-    #     print galera_info[ip]["is_alive"]
 
     print galera_info
 
@@ -147,7 +144,7 @@ if __name__ == '__main__':
         normal_start = [
             dict(action=dict(module='shell',
                              args='%s/bin/mysqld_safe  --defaults-file\=%s/%s/my.cnf &' % (
-                             config_vars.MYSQL_PATH, config_vars.MYSQLDATA_PATH, port))),
+                             options.mysql_path, options.mysqldata_path, port))),
         ]
 
 
@@ -155,7 +152,7 @@ if __name__ == '__main__':
         set_safe_to_bootstrap = [
             dict(action=dict(module='set_safe_to_bootstrap',
                              args=dict(port="%s" % port,
-                                       mysql_data_path="%s" % config_vars.MYSQLDATA_PATH))),
+                                       mysql_data_path="%s" % options.mysqldata_path))),
         ]
 
         print "new cluster start:" + repr(wsrep_new_cluster_start_host)
@@ -165,12 +162,12 @@ if __name__ == '__main__':
             ansible_invoke_api.run_modules(wsrep_new_cluster_start_host,set_safe_to_bootstrap)
             # 启动主节点
             ansible_invoke_api.run_adhoc(wsrep_new_cluster_start_host,'%s/bin/mysqld_safe  --defaults-file\=%s/%s/my.cnf --wsrep-new-cluster &' % (
-            config_vars.MYSQL_PATH, config_vars.MYSQLDATA_PATH, port))
+                options.mysql_path, options.mysqldata_path, port))
 
         print "normal start: " + repr(normal_start_hosts)
         if    normal_start_hosts :
             ansible_invoke_api.run_adhoc(normal_start_hosts,"%s/bin/mysqld_safe --defaults-file\=%s/%s/my.cnf &" % (
-            config_vars.MYSQL_PATH, config_vars.MYSQLDATA_PATH, port))
+                options.mysql_path, options.mysqldata_path, port))
 
 
         # 检查数据库状态
