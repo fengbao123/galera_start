@@ -47,7 +47,7 @@ if __name__ == '__main__':
     parser.add_option("-M", "--mysql_path", dest="mysql_path", help="mysql software path", default="/mysql")
     parser.add_option("-D", "--mysqldata_path", dest="mysqldata_path", help="mysql data path", default="/mysqldata")
     parser.add_option("-U", "--user", dest="user", help="mysql database user", default="dic_wh")
-    parser.add_option("-P", "--password", dest="password", help="mysql database user's password", default="tydic123")
+    parser.add_option("-P", "--password", dest="password", help="mysql database user's password", default="xxxxxx")
 
     (options, args) = parser.parse_args()
 
