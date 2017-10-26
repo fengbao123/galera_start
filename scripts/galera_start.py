@@ -47,7 +47,7 @@ if __name__ == '__main__':
     parser.add_option("-M", "--mysql_path", dest="mysql_path", help="mysql software path", default="/mysql")
     parser.add_option("-D", "--mysqldata_path", dest="mysqldata_path", help="mysql data path", default="/mysqldata")
     parser.add_option("-U", "--user", dest="user", help="mysql database user", default="dic_wh")
-    parser.add_option("-P", "--password", dest="password", help="mysql database user's password", default="xxxxxx")
+    parser.add_option("-P", "--password", dest="password", help="mysql database user's password", default="xxxx")
 
     (options, args) = parser.parse_args()
 
@@ -67,18 +67,31 @@ if __name__ == '__main__':
     # start_hosts = ['192.168.128.138', '192.168.128.139', '192.168.128.148']
 
 
-    # 定义获取galera信息任务
-    get_galera_info = [
-        dict(action=dict(module='get_galera_info',
-                         args=dict(port="%s"  % port,
-                                   mysql_path="%s" % options.mysql_path,
-                                   mysql_data_path="%s" % options.mysqldata_path,
-                                   mysql_user = "%s" % options.user,
-                                   mysql_user_passwd = "%s" % options.password))),
-    ]
+    # # 定义获取galera信息任务
+    # get_galera_info = [
+    #     dict(action=dict(module='get_galera_info',
+    #                      args=dict(port="%s"  % port,
+    #                                mysql_path="%s" % options.mysql_path,
+    #                                mysql_data_path="%s" % options.mysqldata_path,
+    #                                mysql_user = "%s" % options.user,
+    #                                mysql_user_passwd = "%s" % options.password))),
+    # ]
 
     #获取集群数据库状态信息
     for host in cluster_hosts:
+        # 定义获取galera信息任务
+        get_galera_info = [
+            dict(action=dict(module='get_galera_info',
+                             args=dict(port="%s" % port,
+                                       mysql_path="%s" % options.mysql_path,
+                                       mysql_data_path="%s" % options.mysqldata_path,
+                                       mysql_user="%s" % options.user,
+                                       mysql_user_passwd="%s" % options.password,
+                                       host = host))),
+        ]
+
+        print get_galera_info
+
         result_collector = ansible_invoke_api.run_modules(host,get_galera_info)
 
         if result_collector.host_unreachable:

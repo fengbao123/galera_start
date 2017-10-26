@@ -27,8 +27,9 @@ def get_seqno(params):
 # 检查数据库是否存活,1存活，0异常
 def get_is_alive(params):
     is_alive = 0
+
     try:
-        cnx = MySQLdb.connect(host='127.0.0.1',
+        cnx = MySQLdb.connect(host='%s' % params['host'] ,
                               user='%s' % params['mysql_user'],
                               passwd='%s' % params['mysql_user_passwd'],
                               port=int(params['port']))
@@ -47,7 +48,8 @@ def main():
         "mysql_path": {"required": True, "type": "str"},
         "mysql_data_path": {"required": True, "type": "str"},
         "mysql_user": {"required": True, "type": "str"},
-        "mysql_user_passwd": {"required": True, "type": "str"}
+        "mysql_user_passwd": {"required": True, "type": "str"},
+        "host": {"required": True, "type": "str"}
     }
 
     module = AnsibleModule(argument_spec=fields)
