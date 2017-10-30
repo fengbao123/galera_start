@@ -109,8 +109,6 @@ if __name__ == '__main__':
             galera_info[list['ip']] = dict(list['result']['database_info'] )
 
 
-    print galera_info
-
     # 检查
     if len(galera_info) == len(cluster_hosts):
         #普通启动
